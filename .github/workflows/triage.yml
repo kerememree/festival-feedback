@@ -1,0 +1,51 @@
+name: Festival Feedback Triage
+permissions:
+  issues: write
+  contents: read
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      # Eğer farklı bir key adı kullandıysan burayı düzelt
+      GOOSE_PROVIDER: openrouter
+      GOOSE_MODEL: anthropic/claude-3.5-sonnet
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Goose
+        run: |
+          curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | bash
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run Goose Triage
+        run: |
+          
+          export PATH=$HOME/.local/bin:$PATH
+          
+          
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          ISSUE_BODY="${{ github.event.issue.body }}"
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          REPO="${{ github.repository }}"
+
+          
+          goose run "You are an AI Assistant for the Winter Festival.
+          
+          Task: Triage this new GitHub Issue.
+          1. Analyze the Title: '$ISSUE_TITLE' and Body: '$ISSUE_BODY'
+          2. Determine the category: 'urgent', 'feature-request', 'question', or 'bug'.
+          3. Use the 'gh' command line tool to ADD that label to issue #$ISSUE_NUMBER.
+             (Command: gh issue edit $ISSUE_NUMBER --add-label 'LABEL_NAME' -R $REPO)
+          4. Use the 'gh' command to ADD a polite comment to issue #$ISSUE_NUMBER based on the category.
+             (Command: gh issue comment $ISSUE_NUMBER --body 'YOUR_MESSAGE' -R $REPO)
+          
+          Important: You have the 'gh' tool installed and authenticated. Just run the shell commands." --with-builtin developer
