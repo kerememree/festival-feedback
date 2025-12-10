@@ -11,41 +11,63 @@ jobs:
   triage:
     runs-on: ubuntu-latest
     env:
+      
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      # Eğer farklı bir key adı kullandıysan burayı düzelt
-      GOOSE_PROVIDER: openrouter
-      GOOSE_MODEL: anthropic/claude-3.5-sonnet
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install Goose
+      
+      - name: Install Goose Manually
         run: |
-          curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | bash
+          
+          wget https://github.com/block/goose/releases/download/stable/goose-x86_64-unknown-linux-gnu.tar.bz2
+          
+          
+          tar -xvf goose-x86_64-unknown-linux-gnu.tar.bz2
+          
+          
+          mkdir -p $HOME/.local/bin
+          mv goose $HOME/.local/bin/goose
+          chmod +x $HOME/.local/bin/goose
+          
+         
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      
+      - name: Configure Goose
+        run: |
+          mkdir -p $HOME/.config/goose
+          
+          echo "GOOSE_PROVIDER: openrouter" > $HOME/.config/goose/config.yaml
+          echo "GOOSE_MODEL: anthropic/claude-4.5-sonnet" >> $HOME/.config/goose/config.yaml
+
+     
       - name: Run Goose Triage
         run: |
-          
-          export PATH=$HOME/.local/bin:$PATH
-          
           
           ISSUE_TITLE="${{ github.event.issue.title }}"
           ISSUE_BODY="${{ github.event.issue.body }}"
           ISSUE_NUMBER="${{ github.event.issue.number }}"
           REPO="${{ github.repository }}"
+          
+          echo "Processing Issue #$ISSUE_NUMBER: $ISSUE_TITLE"
 
           
           goose run "You are an AI Assistant for the Winter Festival.
           
           Task: Triage this new GitHub Issue.
-          1. Analyze the Title: '$ISSUE_TITLE' and Body: '$ISSUE_BODY'
-          2. Determine the category: 'urgent', 'feature-request', 'question', or 'bug'.
-          3. Use the 'gh' command line tool to ADD that label to issue #$ISSUE_NUMBER.
-             (Command: gh issue edit $ISSUE_NUMBER --add-label 'LABEL_NAME' -R $REPO)
-          4. Use the 'gh' command to ADD a polite comment to issue #$ISSUE_NUMBER based on the category.
-             (Command: gh issue comment $ISSUE_NUMBER --body 'YOUR_MESSAGE' -R $REPO)
+          CONTEXT:
+          Title: '$ISSUE_TITLE'
+          Body: '$ISSUE_BODY'
           
-          Important: You have the 'gh' tool installed and authenticated. Just run the shell commands." --with-builtin developer
+          INSTRUCTIONS:
+          1. Analyze the content and determine the category: 'urgent', 'feature-request', 'question', or 'bug'.
+          2. Use the 'gh' command to ADD that label to issue #$ISSUE_NUMBER.
+             Command: gh issue edit $ISSUE_NUMBER --add-label 'LABEL_NAME' -R $REPO
+          3. Use the 'gh' command to ADD a polite comment to issue #$ISSUE_NUMBER.
+             Command: gh issue comment $ISSUE_NUMBER --body 'YOUR_RESPONSE_MESSAGE' -R $REPO
+          
+          System Note: You have 'gh' installed and authenticated. Just run the commands." --with-builtin developer
